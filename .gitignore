@@ -84,3 +84,6 @@ appsettings.Local.json
 appsettings.*.local.json
 secrets.json
 body.json
+
+# Claude
+.claude/

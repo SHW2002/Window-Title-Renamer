@@ -46,6 +46,16 @@ namespace WindowTitleRenamer
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        public const int GWL_EXSTYLE = -20;
+        public const int WS_EX_APPWINDOW = 0x00040000;
+        public const int WS_EX_TOOLWINDOW = 0x00000080;
     }
 
     internal sealed class PersistentRenamer : IDisposable
@@ -336,20 +346,51 @@ namespace WindowTitleRenamer
 
         private static (bool shouldShow, bool shouldExit) HideToTray()
         {
+            const string consoleTitle = "Window Title Renamer";
             IntPtr consoleHwnd = NativeMethods.GetConsoleWindow();
+
+            var hiddenWindows = new List<(IntPtr hwnd, int savedStyle)>();
+
+            NativeMethods.EnumWindows((hwnd, _) =>
+            {
+                if (!NativeMethods.IsWindowVisible(hwnd)) return true;
+                string title = GetWindowTitle(hwnd);
+                if (title.IndexOf(consoleTitle, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    hiddenWindows.Add((hwnd,
+                        NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE)));
+                }
+                return true;
+            }, IntPtr.Zero);
+
             if (consoleHwnd != IntPtr.Zero)
             {
-                NativeMethods.ShowWindow(consoleHwnd, NativeMethods.SW_HIDE);
+                bool found = false;
+                foreach (var (hwnd, _) in hiddenWindows)
+                    if (hwnd == consoleHwnd) { found = true; break; }
+                if (!found)
+                    hiddenWindows.Add((consoleHwnd,
+                        NativeMethods.GetWindowLong(consoleHwnd, NativeMethods.GWL_EXSTYLE)));
+            }
+
+            foreach (var (hwnd, savedStyle) in hiddenWindows)
+            {
+                NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE,
+                    (savedStyle | NativeMethods.WS_EX_TOOLWINDOW) & ~NativeMethods.WS_EX_APPWINDOW);
+                NativeMethods.ShowWindow(hwnd, NativeMethods.SW_HIDE);
             }
 
             var tray = new TrayController("Window Title Renamer");
             var result = tray.Run();
 
-            if (consoleHwnd != IntPtr.Zero)
+            foreach (var (hwnd, savedStyle) in hiddenWindows)
             {
-                NativeMethods.ShowWindow(consoleHwnd, NativeMethods.SW_SHOW);
-                NativeMethods.SetForegroundWindow(consoleHwnd);
+                NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, savedStyle);
+                NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOW);
             }
+
+            if (hiddenWindows.Count > 0)
+                NativeMethods.SetForegroundWindow(hiddenWindows[0].hwnd);
 
             return result;
         }
