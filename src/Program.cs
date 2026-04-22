@@ -104,21 +104,61 @@ internal static class Program
         return result;
     }
 
-    private static int ReadIntAllow0(string prompt, int lo, int hi)
+    private static WindowInfo? SelectWindow(
+        List<WindowInfo> allWindows, Dictionary<IntPtr, string> rules)
     {
+        var displayedList = allWindows;
+
         while (true)
         {
-            Console.Write(prompt);
-            string? s = Console.ReadLine()?.Trim();
+            Console.Write("请输入编号或关键字（0 隐藏到托盘）: ");
+            string? input = Console.ReadLine()?.Trim();
 
-            if (int.TryParse(s, out int v))
+            if (string.IsNullOrEmpty(input)) continue;
+
+            if (int.TryParse(input, out int num))
             {
-                if (v == 0) return 0;
-                if (v >= lo && v <= hi) return v;
+                if (num == 0) return null;
+                if (num >= 1 && num <= displayedList.Count)
+                    return displayedList[num - 1];
+                Console.WriteLine($"请输入 0 或 1 到 {displayedList.Count} 的编号。");
+                continue;
             }
 
-            Console.WriteLine($"请输入 0 或 {lo} 到 {hi} 的整数。");
+            var matches = allWindows
+                .Where(w => w.Title.IndexOf(input, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToList();
+
+            if (matches.Count == 0)
+            {
+                Console.WriteLine("没有匹配的窗口，请重新输入。");
+                continue;
+            }
+
+            if (matches.Count == 1)
+            {
+                Console.WriteLine($"匹配到：{matches[0].Title}");
+                return matches[0];
+            }
+
+            Console.WriteLine($"\n匹配到 {matches.Count} 个窗口：");
+            PrintWindowList(matches, rules);
+            displayedList = matches;
         }
+    }
+
+    private static void PrintWindowList(
+        List<WindowInfo> windows, Dictionary<IntPtr, string> rules)
+    {
+        Console.WriteLine(new string('-', 90));
+        for (int i = 0; i < windows.Count; i++)
+        {
+            var w = windows[i];
+            string mark = rules.ContainsKey(w.Hwnd) ? " *保持中*" : "";
+            Console.WriteLine(
+                $"[{i + 1,3}] {w.Title}{mark}   (HWND=0x{w.Hwnd.ToInt64():X16})");
+        }
+        Console.WriteLine(new string('-', 90));
     }
 
     private static string ReadNonEmpty(string prompt)
@@ -163,7 +203,7 @@ internal static class Program
         Console.OutputEncoding = Encoding.UTF8;
 
         Console.WriteLine("Window Title Renamer");
-        Console.WriteLine("输入编号时输入 0：隐藏到托盘后台运行（Show 返回 / Exit 退出）");
+        Console.WriteLine("输入编号选择窗口，输入文字模糊搜索窗口，输入 0 隐藏到托盘");
         Console.WriteLine();
 
         try
@@ -181,23 +221,11 @@ internal static class Program
                 }
 
                 Console.WriteLine($"当前长久保持规则数：{rules.Count}（后台每秒重设一次）");
-                Console.WriteLine(new string('-', 90));
+                PrintWindowList(wins, rules);
 
-                for (int i = 0; i < wins.Count; i++)
-                {
-                    var w = wins[i];
-                    string mark = rules.ContainsKey(w.Hwnd) ? " *保持中*" : "";
-                    Console.WriteLine(
-                        $"[{i + 1,3}] {w.Title}{mark}   (HWND=0x{w.Hwnd.ToInt64():X16})");
-                }
+                WindowInfo? selected = SelectWindow(wins, rules);
 
-                Console.WriteLine(new string('-', 90));
-
-                int choice = ReadIntAllow0(
-                    "请输入要重命名的窗口编号（或 0 隐藏到托盘）: ",
-                    1, wins.Count);
-
-                if (choice == 0)
+                if (selected == null)
                 {
                     var (_, shouldExit) = HideToTray();
                     if (shouldExit)
@@ -207,9 +235,7 @@ internal static class Program
                     continue;
                 }
 
-                WindowInfo selected = wins[choice - 1];
-
-                if (!NativeMethods.IsWindow(selected.Hwnd))
+                if (!NativeMethods.IsWindow(selected.Value.Hwnd))
                 {
                     Console.WriteLine("目标窗口已不存在（可能已关闭）。回到列表。\n");
                     continue;
@@ -218,10 +244,10 @@ internal static class Program
                 string newTitle = ReadNonEmpty("请输入新窗口标题: ");
                 bool persist = ReadYesNo("是否长久保持（每秒重复设置一次）？(y/n): ");
 
-                bool ok = SetWindowTitle(selected.Hwnd, newTitle);
+                bool ok = SetWindowTitle(selected.Value.Hwnd, newTitle);
                 if (ok)
                 {
-                    Console.WriteLine($"已重命名：{selected.Title} -> {newTitle}");
+                    Console.WriteLine($"已重命名：{selected.Value.Title} -> {newTitle}");
                 }
                 else
                 {
@@ -231,12 +257,12 @@ internal static class Program
 
                 if (persist)
                 {
-                    keeper.AddOrUpdate(selected.Hwnd, newTitle);
+                    keeper.AddOrUpdate(selected.Value.Hwnd, newTitle);
                     Console.WriteLine("已加入长久保持。\n");
                 }
                 else
                 {
-                    keeper.Remove(selected.Hwnd);
+                    keeper.Remove(selected.Value.Hwnd);
                     Console.WriteLine();
                 }
             }
