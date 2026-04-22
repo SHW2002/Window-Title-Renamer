@@ -21,6 +21,8 @@ Download the tool from the **Releases** page and double-click the .exe file to r
 - Enter **text** to fuzzy-search windows by title — if exactly one matches it is selected automatically, otherwise the matched list is shown for further narrowing
 - Enter **0** to hide to system tray (right-click the tray icon to show or exit)
 
+<br>
+
 # 窗口标题重命名工具
 
 重命名窗口标题（包括任务栏按钮标签），并可选择将其锁定以防止更改。**仅限Windows**。
