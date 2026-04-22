@@ -1,0 +1,86 @@
+# =========================
+# .NET / Visual Studio
+# =========================
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Oo]ut/
+publish/
+artifacts/
+.artifacts/
+
+# Visual Studio
+.vs/
+Generated Files/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.rsuser
+*.sln.docstates
+*.userprefs
+
+# Logs
+*.log
+logs/
+[Ll]og/
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+BenchmarkDotNet.Artifacts/
+
+# NuGet packages / outputs
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+**/[Pp]ackages/*
+
+# Keep build targets under packages if needed
+!**/[Pp]ackages/build/
+
+# Publish profiles / deployment
+*.Publish.xml
+*.pubxml
+*.azurePubxml
+*.publishproj
+PublishScripts/
+
+# Temporary / cache
+*.tmp
+*.temp
+*.cache
+*.pidb
+*.svclog
+
+# ReSharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+body.json
