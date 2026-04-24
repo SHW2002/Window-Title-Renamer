@@ -53,6 +53,47 @@ internal static class Program
         return NativeMethods.SetWindowTextW(hwnd, newTitle);
     }
 
+    private static bool IsWideChar(char c)
+    {
+        return (c >= 0x1100 && c <= 0x115F) ||
+               (c >= 0x2E80 && c <= 0x303E) ||
+               (c >= 0x3040 && c <= 0x33BF) ||
+               (c >= 0x3400 && c <= 0x4DBF) ||
+               (c >= 0x4E00 && c <= 0xA4CF) ||
+               (c >= 0xAC00 && c <= 0xD7A3) ||
+               (c >= 0xF900 && c <= 0xFAFF) ||
+               (c >= 0xFE10 && c <= 0xFE6B) ||
+               (c >= 0xFF01 && c <= 0xFF60) ||
+               (c >= 0xFFE0 && c <= 0xFFE6);
+    }
+
+    private static int DisplayWidth(string s)
+    {
+        int w = 0;
+        foreach (char c in s)
+            w += IsWideChar(c) ? 2 : 1;
+        return w;
+    }
+
+    private static string PadRightByDisplay(string s, int totalWidth)
+    {
+        int padding = totalWidth - DisplayWidth(s);
+        return padding > 0 ? s + new string(' ', padding) : s;
+    }
+
+    private static string TruncateByDisplay(string s, int maxWidth)
+    {
+        int w = 0;
+        for (int i = 0; i < s.Length; i++)
+        {
+            int cw = IsWideChar(s[i]) ? 2 : 1;
+            if (w + cw > maxWidth)
+                return s[..i];
+            w += cw;
+        }
+        return s;
+    }
+
     private static (bool shouldShow, bool shouldExit) HideToTray()
     {
         const string consoleTitle = "Window Title Renamer";
@@ -150,15 +191,41 @@ internal static class Program
     private static void PrintWindowList(
         List<WindowInfo> windows, Dictionary<IntPtr, string> rules)
     {
-        Console.WriteLine(new string('-', 90));
+        const int statusW = 8;
+        const int hwndW = 18;
+        const int maxTitleW = 45;
+
+        int titleW = DisplayWidth("窗口标题");
+        foreach (var w in windows)
+        {
+            int tw = DisplayWidth(w.Title);
+            if (tw > titleW) titleW = tw;
+        }
+        titleW = Math.Min(titleW, maxTitleW);
+
+        string sep1 = new string('─', 7);
+        string sep2 = new string('─', titleW + 2);
+        string sep3 = new string('─', statusW + 2);
+        string sep4 = new string('─', hwndW + 1);
+
+        Console.WriteLine($"{sep1}┬{sep2}┬{sep3}┬{sep4}");
+        Console.WriteLine(
+            $" {PadRightByDisplay("编号", 5)} │ {PadRightByDisplay("窗口标题", titleW)} │ {PadRightByDisplay("状态", statusW)} │ {"HWND",-hwndW}");
+        Console.WriteLine($"{sep1}┼{sep2}┼{sep3}┼{sep4}");
+
         for (int i = 0; i < windows.Count; i++)
         {
             var w = windows[i];
-            string mark = rules.ContainsKey(w.Hwnd) ? " *保持中*" : "";
+            string mark = rules.ContainsKey(w.Hwnd) ? "*保持中*" : "";
+            string title = w.Title;
+            if (DisplayWidth(title) > titleW)
+                title = TruncateByDisplay(title, titleW - 2) + "..";
+
             Console.WriteLine(
-                $"[{i + 1,3}] {w.Title}{mark}   (HWND=0x{w.Hwnd.ToInt64():X16})");
+                $" [{i + 1,3}] │ {PadRightByDisplay(title, titleW)} │ {PadRightByDisplay(mark, statusW)} │ 0x{w.Hwnd.ToInt64():X16}");
         }
-        Console.WriteLine(new string('-', 90));
+
+        Console.WriteLine($"{sep1}┴{sep2}┴{sep3}┴{sep4}");
     }
 
     private static string ReadNonEmpty(string prompt)
@@ -202,8 +269,11 @@ internal static class Program
 
         Console.OutputEncoding = Encoding.UTF8;
 
-        Console.WriteLine("Window Title Renamer");
-        Console.WriteLine("输入编号选择窗口，输入文字模糊搜索窗口，输入 0 隐藏到托盘");
+        string headerLine = new string('═', 60);
+        Console.WriteLine(headerLine);
+        Console.WriteLine("  Window Title Renamer");
+        Console.WriteLine("  输入编号选择窗口，输入文字模糊搜索窗口，输入 0 隐藏到托盘");
+        Console.WriteLine(headerLine);
         Console.WriteLine();
 
         try
@@ -215,12 +285,14 @@ internal static class Program
 
                 if (wins.Count == 0)
                 {
-                    Console.WriteLine("没有找到可重命名的窗口（可见且标题非空）。1 秒后重试…");
+                    Console.WriteLine("  没有找到可重命名的窗口（可见且标题非空），1 秒后重试…");
                     Thread.Sleep(1000);
                     continue;
                 }
 
-                Console.WriteLine($"当前长久保持规则数：{rules.Count}（后台每秒重设一次）");
+                if (rules.Count > 0)
+                    Console.WriteLine($"  长久保持规则：{rules.Count} 条（后台每秒重设一次）\n");
+
                 PrintWindowList(wins, rules);
 
                 WindowInfo? selected = SelectWindow(wins, rules);
@@ -237,7 +309,7 @@ internal static class Program
 
                 if (!NativeMethods.IsWindow(selected.Value.Hwnd))
                 {
-                    Console.WriteLine("目标窗口已不存在（可能已关闭）。回到列表。\n");
+                    Console.WriteLine("  目标窗口已不存在（可能已关闭），回到列表。\n");
                     continue;
                 }
 
@@ -245,26 +317,29 @@ internal static class Program
                 bool persist = ReadYesNo("是否长久保持（每秒重复设置一次）？(y/n): ");
 
                 bool ok = SetWindowTitle(selected.Value.Hwnd, newTitle);
+                Console.WriteLine();
                 if (ok)
                 {
-                    Console.WriteLine($"已重命名：{selected.Value.Title} -> {newTitle}");
+                    Console.WriteLine($"  已重命名：{selected.Value.Title} → {newTitle}");
                 }
                 else
                 {
                     Console.WriteLine(
-                        $"重命名失败（GetLastError={Marshal.GetLastWin32Error()}）。可能原因：权限不足/窗口不接受 SetWindowText。");
+                        $"  重命名失败（GetLastError={Marshal.GetLastWin32Error()}）");
+                    Console.WriteLine(
+                        "  可能原因：权限不足/窗口不接受 SetWindowText。");
                 }
 
                 if (persist)
                 {
                     keeper.AddOrUpdate(selected.Value.Hwnd, newTitle);
-                    Console.WriteLine("已加入长久保持。\n");
+                    Console.WriteLine("  已加入长久保持。");
                 }
                 else
                 {
                     keeper.Remove(selected.Value.Hwnd);
-                    Console.WriteLine();
                 }
+                Console.WriteLine();
             }
         }
         catch (KeyboardInterruptException)
