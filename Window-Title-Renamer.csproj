@@ -21,4 +21,16 @@
     </Content>
   </ItemGroup>
 
+  <Target Name="ArchiveAfterPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <_Timestamp>$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</_Timestamp>
+      <_ZipName>$(AssemblyName)_$(RuntimeIdentifier)_$(_Timestamp).zip</_ZipName>
+      <_ArchiveDir>$(MSBuildProjectDirectory)\bin\Release-Archive</_ArchiveDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_ArchiveDir)" />
+    <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(_ArchiveDir)\$(_ZipName)" Overwrite="true" />
+    <Message Importance="high" Text="Archived: $(_ArchiveDir)\$(_ZipName)" />
+  </Target>
+
 </Project>
