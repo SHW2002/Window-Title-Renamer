@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -5,6 +6,29 @@ namespace WindowTitleRenamer;
 
 internal static class Program
 {
+    private static Icon? _appIcon;
+
+    private static Icon? LoadAppIcon()
+    {
+        string exeDir = AppContext.BaseDirectory;
+        string iconPath = Path.Combine(exeDir, "res", "icon.png");
+        if (!File.Exists(iconPath))
+            return null;
+
+        using var bmp = new Bitmap(iconPath);
+        IntPtr hIcon = bmp.GetHicon();
+        return Icon.FromHandle(hIcon);
+    }
+
+    private static void SetConsoleWindowIcon(Icon icon)
+    {
+        IntPtr hwnd = NativeMethods.GetConsoleWindow();
+        if (hwnd == IntPtr.Zero) return;
+
+        NativeMethods.SendMessage(hwnd, NativeMethods.WM_SETICON, (IntPtr)NativeMethods.ICON_SMALL, icon.Handle);
+        NativeMethods.SendMessage(hwnd, NativeMethods.WM_SETICON, (IntPtr)NativeMethods.ICON_BIG, icon.Handle);
+    }
+
     private static string GetWindowTitle(IntPtr hwnd)
     {
         int len = NativeMethods.GetWindowTextLengthW(hwnd);
@@ -130,7 +154,7 @@ internal static class Program
             NativeMethods.ShowWindow(hwnd, NativeMethods.SW_HIDE);
         }
 
-        var tray = new TrayController("Window Title Renamer");
+        var tray = new TrayController("Window Title Renamer", _appIcon);
         var result = tray.Run();
 
         foreach (var (hwnd, savedStyle) in hiddenWindows)
@@ -263,6 +287,10 @@ internal static class Program
     private static int Main()
     {
         NativeMethods.SetConsoleTitleW("Window Title Renamer");
+
+        _appIcon = LoadAppIcon();
+        if (_appIcon != null)
+            SetConsoleWindowIcon(_appIcon);
 
         using PersistentRenamer keeper = new PersistentRenamer();
         keeper.Start();

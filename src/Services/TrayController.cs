@@ -5,12 +5,14 @@ namespace WindowTitleRenamer;
 internal sealed class TrayController
 {
     private readonly string _tooltip;
+    private readonly System.Drawing.Icon? _icon;
     private bool _shouldShow;
     private bool _shouldExit;
 
-    public TrayController(string tooltip = "Window Title Renamer")
+    public TrayController(string tooltip = "Window Title Renamer", System.Drawing.Icon? icon = null)
     {
         _tooltip = tooltip;
+        _icon = icon;
     }
 
     public (bool shouldShow, bool shouldExit) Run()
@@ -27,7 +29,7 @@ internal sealed class TrayController
                 Application.SetCompatibleTextRenderingDefault(false);
 
                 using TrayApplicationContext ctx = new TrayApplicationContext(
-                    _tooltip,
+                    _tooltip, _icon,
                     onShow: () =>
                     {
                         _shouldShow = true;
@@ -70,7 +72,7 @@ internal sealed class TrayController
         private readonly Action _onShow;
         private readonly Action _onExit;
 
-        public TrayApplicationContext(string tooltip, Action onShow, Action onExit)
+        public TrayApplicationContext(string tooltip, System.Drawing.Icon? icon, Action onShow, Action onExit)
         {
             _onShow = onShow;
             _onExit = onExit;
@@ -98,7 +100,7 @@ internal sealed class TrayController
             _notifyIcon = new NotifyIcon
             {
                 Text = tooltip,
-                Icon = System.Drawing.SystemIcons.Application,
+                Icon = icon ?? System.Drawing.SystemIcons.Application,
                 Visible = true,
                 ContextMenuStrip = _menu
             };
