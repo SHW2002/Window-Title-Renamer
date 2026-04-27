@@ -45,3 +45,10 @@ Download the tool from the **Releases** page and double-click the .exe file to r
 - 输入**编号**直接选择窗口
 - 输入**文字**模糊搜索窗口标题——若恰好匹配一个则自动选中，否则显示匹配列表可继续缩小范围
 - 输入 **0** 隐藏到系统托盘（右键托盘图标可返回或退出）
+
+<br/>
+<br/>
+
+<p align="center">
+  <img src="https://img.shields.io/github/downloads/SHthemW/MaaEnd-Webhook-Retransmitter/total" alt="downloads" />
+</p>
