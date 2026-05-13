@@ -270,12 +270,15 @@ internal static class Program
         }
     }
 
-    private static bool ReadYesNo(string prompt)
+    private static bool ReadYesNo(string prompt, bool? defaultValue = null)
     {
         while (true)
         {
             Console.Write(prompt);
             string s = (Console.ReadLine() ?? "").Trim().ToLowerInvariant();
+
+            if (s == "" && defaultValue.HasValue)
+                return defaultValue.Value;
 
             if (s == "y" || s == "yes" || s == "是" || s == "true" || s == "1")
                 return true;
@@ -367,7 +370,7 @@ internal static class Program
                 }
 
                 string newTitle = ReadNonEmpty(L.PromptNewTitle);
-                bool persist = ReadYesNo(L.PromptPersist);
+                bool persist = ReadYesNo(L.PromptPersist, defaultValue: true);
 
                 bool ok = SetWindowTitle(selected.Value.Hwnd, newTitle);
                 Console.WriteLine();
