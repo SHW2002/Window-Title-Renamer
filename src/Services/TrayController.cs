@@ -6,13 +6,18 @@ internal sealed class TrayController
 {
     private readonly string _tooltip;
     private readonly System.Drawing.Icon? _icon;
+    private readonly string _labelShow;
+    private readonly string _labelExit;
     private bool _shouldShow;
     private bool _shouldExit;
 
-    public TrayController(string tooltip = "Window Title Renamer", System.Drawing.Icon? icon = null)
+    public TrayController(string tooltip, System.Drawing.Icon? icon,
+        string labelShow = "Show", string labelExit = "Exit")
     {
         _tooltip = tooltip;
         _icon = icon;
+        _labelShow = labelShow;
+        _labelExit = labelExit;
     }
 
     public (bool shouldShow, bool shouldExit) Run()
@@ -29,7 +34,7 @@ internal sealed class TrayController
                 Application.SetCompatibleTextRenderingDefault(false);
 
                 using TrayApplicationContext ctx = new TrayApplicationContext(
-                    _tooltip, _icon,
+                    _tooltip, _icon, _labelShow, _labelExit,
                     onShow: () =>
                     {
                         _shouldShow = true;
@@ -72,15 +77,16 @@ internal sealed class TrayController
         private readonly Action _onShow;
         private readonly Action _onExit;
 
-        public TrayApplicationContext(string tooltip, System.Drawing.Icon? icon, Action onShow, Action onExit)
+        public TrayApplicationContext(string tooltip, System.Drawing.Icon? icon,
+            string labelShow, string labelExit, Action onShow, Action onExit)
         {
             _onShow = onShow;
             _onExit = onExit;
 
             _menu = new ContextMenuStrip();
 
-            var showItem = new ToolStripMenuItem("Show (回到前台)");
-            var exitItem = new ToolStripMenuItem("Exit (退出)");
+            var showItem = new ToolStripMenuItem(labelShow);
+            var exitItem = new ToolStripMenuItem(labelExit);
 
             showItem.Click += (_, __) =>
             {
