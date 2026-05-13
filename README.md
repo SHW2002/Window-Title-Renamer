@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="res/p1.png" width="60%" />
+  <br>
+  <img src="res/p2.png" width="60%" />
+</p>
+
 # Window Title Renamer
 
 Rename a window title (including the taskbar button label) and optionally lock it to prevent changes. **Windows only**.
