@@ -1,7 +1,7 @@
-**English** | [简体中文](README.zh-CN.md)
-
 <p align="center">
   <img src="res/gui.png" width="85%" alt="Window Title Renamer GUI" />
+  <br />
+  <strong>English</strong> | <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 # Window Title Renamer
