@@ -7,6 +7,7 @@ internal sealed class Strings
     public string LanguageLabel { get; init; } = "";
     public string HideToTray { get; init; } = "";
     public string WindowListTitle { get; init; } = "";
+    public string LoadingWindows { get; init; } = "";
     public string SearchPlaceholder { get; init; } = "";
     public string Refresh { get; init; } = "";
     public string WindowCount { get; init; } = "";
@@ -49,6 +50,7 @@ internal sealed class Strings
         LanguageLabel = "Language",
         HideToTray = "Hide to tray",
         WindowListTitle = "Open windows",
+        LoadingWindows = "Loading windows...",
         SearchPlaceholder = "Search window titles...",
         Refresh = "Refresh",
         WindowCount = "{0} windows",
@@ -92,6 +94,7 @@ internal sealed class Strings
         LanguageLabel = "语言",
         HideToTray = "隐藏到托盘",
         WindowListTitle = "已打开的窗口",
+        LoadingWindows = "正在加载窗口列表…",
         SearchPlaceholder = "搜索窗口标题…",
         Refresh = "刷新",
         WindowCount = "共 {0} 个窗口",

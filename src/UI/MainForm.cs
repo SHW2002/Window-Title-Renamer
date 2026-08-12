@@ -9,6 +9,7 @@ namespace WindowTitleRenamer.UI;
 internal sealed class MainForm : Form
 {
     private const int WmSysCommand = 0x0112;
+    private const int WsExComposited = 0x02000000;
     private const long ScMinimize = 0xF020;
     private const long SystemCommandMask = 0xFFF0;
 
@@ -38,7 +39,8 @@ internal sealed class MainForm : Form
     private readonly Label _windowListTitle = new();
     private readonly TextBox _searchBox = new();
     private readonly ThemedButton _refreshButton = new();
-    private readonly DataGridView _windowGrid = new();
+    private readonly BufferedDataGridView _windowGrid = new();
+    private readonly Label _windowLoadingLabel = new();
     private readonly Label _windowCountLabel = new();
     private readonly Label _renamePanelTitle = new();
     private readonly Label _selectedWindowLabel = new();
@@ -70,10 +72,21 @@ internal sealed class MainForm : Form
     private bool _updatingGrid;
     private bool _applyingLanguage;
     private bool _refreshInProgress;
+    private bool _hasLoadedWindowList;
     private bool _exitRequested;
     private bool _trayHintShown;
 
     private Strings L => Strings.Current;
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            CreateParams parameters = base.CreateParams;
+            parameters.ExStyle |= WsExComposited;
+            return parameters;
+        }
+    }
 
     public MainForm(
         WindowService windowService,
@@ -87,12 +100,20 @@ internal sealed class MainForm : Form
         _applicationIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         _refreshTimer = new System.Windows.Forms.Timer { Interval = 2000 };
 
-        ConfigureForm();
-        BuildLayout();
-        ConfigureTrayIcon();
-        WireEvents();
-        SelectConfiguredLanguage();
-        ApplyLocalization();
+        SuspendLayout();
+        try
+        {
+            ConfigureForm();
+            BuildLayout();
+            ConfigureTrayIcon();
+            WireEvents();
+            SelectConfiguredLanguage();
+            ApplyLocalization();
+        }
+        finally
+        {
+            ResumeLayout(true);
+        }
     }
 
     private void ConfigureForm()
@@ -280,13 +301,29 @@ internal sealed class MainForm : Form
 
         ConfigureWindowGrid();
 
+        Panel gridHost = new()
+        {
+            Dock = DockStyle.Fill,
+            BackColor = CardColor,
+            Margin = Padding.Empty,
+        };
+        _windowLoadingLabel.Dock = DockStyle.Fill;
+        _windowLoadingLabel.BackColor = CardColor;
+        _windowLoadingLabel.ForeColor = SecondaryTextColor;
+        _windowLoadingLabel.Font = new Font("Segoe UI", 10F);
+        _windowLoadingLabel.TextAlign = ContentAlignment.MiddleCenter;
+        gridHost.Controls.Add(_windowGrid);
+        gridHost.Controls.Add(_windowLoadingLabel);
+        _windowLoadingLabel.BringToFront();
+
         _windowCountLabel.AutoSize = true;
         _windowCountLabel.ForeColor = SecondaryTextColor;
+        _windowCountLabel.MinimumSize = new Size(0, _windowCountLabel.Font.Height);
         _windowCountLabel.Margin = new Padding(2, 10, 0, 0);
 
         layout.Controls.Add(_windowListTitle, 0, 0);
         layout.Controls.Add(searchLayout, 0, 1);
-        layout.Controls.Add(_windowGrid, 0, 2);
+        layout.Controls.Add(gridHost, 0, 2);
         layout.Controls.Add(_windowCountLabel, 0, 3);
         card.Controls.Add(layout);
         return card;
@@ -621,16 +658,12 @@ internal sealed class MainForm : Form
     private void WireEvents()
     {
         Load += (_, _) => FitToWorkingArea();
-        Shown += (_, _) =>
-        {
-            RefreshWindowList(true);
-            _refreshTimer.Start();
-        };
+        Shown += MainForm_Shown;
         FormClosing += MainForm_FormClosing;
         Resize += MainForm_Resize;
 
-        _refreshTimer.Tick += (_, _) => RefreshWindowList(false);
-        _refreshButton.Click += (_, _) => RefreshWindowList(true);
+        _refreshTimer.Tick += async (_, _) => await RefreshWindowListAsync(false);
+        _refreshButton.Click += async (_, _) => await RefreshWindowListAsync(true);
         _searchBox.TextChanged += (_, _) => ApplyWindowFilter(_selectedWindow?.Hwnd);
         _windowGrid.SelectionChanged += (_, _) => HandleGridSelectionChanged();
         _windowGrid.CellDoubleClick += (_, eventArgs) =>
@@ -643,14 +676,14 @@ internal sealed class MainForm : Form
         };
         _newTitleBox.TextChanged += (_, _) => UpdateEditorButtons();
         _newTitleBox.KeyDown += NewTitleBox_KeyDown;
-        _applyButton.Click += (_, _) => ApplyRename();
+        _applyButton.Click += async (_, _) => await ApplyRenameAsync();
         _stopKeepingButton.Click += (_, _) => StopKeepingSelectedWindow();
         _hideToTrayButton.Click += (_, _) => HideToTray();
         _languageSelector.SelectedIndexChanged += (_, _) => ChangeLanguage();
 
-        _trayShowItem.Click += (_, _) => RestoreFromTray();
+        _trayShowItem.Click += async (_, _) => await RestoreFromTrayAsync();
         _trayExitItem.Click += (_, _) => ExitApplication();
-        _notifyIcon.DoubleClick += (_, _) => RestoreFromTray();
+        _notifyIcon.DoubleClick += async (_, _) => await RestoreFromTrayAsync();
     }
 
     private void FitToWorkingArea()
@@ -708,6 +741,7 @@ internal sealed class MainForm : Form
         _languageLabel.Text = L.LanguageLabel;
         _hideToTrayButton.Text = L.HideToTray;
         _windowListTitle.Text = L.WindowListTitle;
+        _windowLoadingLabel.Text = L.LoadingWindows;
         _searchBox.PlaceholderText = L.SearchPlaceholder;
         _refreshButton.Text = L.Refresh;
         _windowGrid.Columns["TitleColumn"].HeaderText = L.ColumnTitle;
@@ -727,23 +761,54 @@ internal sealed class MainForm : Form
 
         UpdateSelectedWindow(_selectedWindow, false);
         ApplyWindowFilter(_selectedWindow?.Hwnd);
-        ShowStatus(L.Ready, StatusKind.Neutral);
+        ShowStatus(
+            _refreshInProgress && !_hasLoadedWindowList ? L.LoadingWindows : L.Ready,
+            StatusKind.Neutral);
     }
 
-    private void RefreshWindowList(bool announce)
+    private async void MainForm_Shown(object? sender, EventArgs eventArgs)
     {
-        if (_refreshInProgress)
+        ShowStatus(L.LoadingWindows, StatusKind.Neutral);
+        Refresh();
+        await RefreshWindowListAsync(true);
+
+        if (!IsDisposed && !Disposing && Visible)
+        {
+            _refreshTimer.Start();
+        }
+    }
+
+    private async Task RefreshWindowListAsync(bool announce)
+    {
+        if (_refreshInProgress || IsDisposed || Disposing)
         {
             return;
         }
 
         _refreshInProgress = true;
-        IntPtr? preferredHandle = _selectedWindow?.Hwnd;
+        _refreshButton.Enabled = false;
+
+        if (!_hasLoadedWindowList)
+        {
+            _windowLoadingLabel.Visible = true;
+            _windowLoadingLabel.BringToFront();
+            ShowStatus(L.LoadingWindows, StatusKind.Neutral);
+        }
 
         try
         {
-            _allWindows = [.. _windowService.ListOpenWindows()];
-            ApplyWindowFilter(preferredHandle);
+            List<WindowInfo> windows = await Task.Run(
+                () => _windowService.ListOpenWindows().ToList());
+
+            if (IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            _allWindows = windows;
+            _hasLoadedWindowList = true;
+            ApplyWindowFilter(_selectedWindow?.Hwnd);
+            _windowLoadingLabel.Visible = false;
 
             if (announce)
             {
@@ -755,11 +820,19 @@ internal sealed class MainForm : Form
         }
         catch (Exception exception)
         {
-            ShowStatus(string.Format(L.RefreshFailedError, exception.Message), StatusKind.Error);
+            if (!IsDisposed && !Disposing)
+            {
+                _windowLoadingLabel.Visible = false;
+                ShowStatus(string.Format(L.RefreshFailedError, exception.Message), StatusKind.Error);
+            }
         }
         finally
         {
             _refreshInProgress = false;
+            if (!IsDisposed && !Disposing)
+            {
+                _refreshButton.Enabled = true;
+            }
         }
     }
 
@@ -781,15 +854,18 @@ internal sealed class MainForm : Form
         {
             _windowGrid.Rows.Clear();
             DataGridViewRow? preferredRow = null;
+            DataGridViewRow[] rows = new DataGridViewRow[filteredWindows.Count];
 
-            foreach (WindowInfo window in filteredWindows)
+            for (int index = 0; index < filteredWindows.Count; index++)
             {
+                WindowInfo window = filteredWindows[index];
                 bool isKeeping = rules.ContainsKey(window.Hwnd);
-                int rowIndex = _windowGrid.Rows.Add(
+                DataGridViewRow row = new();
+                row.CreateCells(
+                    _windowGrid,
                     window.Title,
                     isKeeping ? L.Keeping : string.Empty,
                     window.HandleText);
-                DataGridViewRow row = _windowGrid.Rows[rowIndex];
                 row.Tag = window;
                 row.Cells[0].ToolTipText = window.Title;
 
@@ -802,6 +878,13 @@ internal sealed class MainForm : Form
                 {
                     preferredRow = row;
                 }
+
+                rows[index] = row;
+            }
+
+            if (rows.Length > 0)
+            {
+                _windowGrid.Rows.AddRange(rows);
             }
 
             _windowGrid.ClearSelection();
@@ -828,11 +911,13 @@ internal sealed class MainForm : Form
             _updatingGrid = false;
         }
 
-        _windowCountLabel.Text = string.IsNullOrEmpty(searchText)
-            ? string.Format(L.WindowCount, _allWindows.Count)
-            : string.Format(L.FilteredWindowCount, filteredWindows.Count, _allWindows.Count);
+        _windowCountLabel.Text = !_hasLoadedWindowList
+            ? string.Empty
+            : string.IsNullOrEmpty(searchText)
+                ? string.Format(L.WindowCount, _allWindows.Count)
+                : string.Format(L.FilteredWindowCount, filteredWindows.Count, _allWindows.Count);
 
-        if (filteredWindows.Count == 0)
+        if (_hasLoadedWindowList && filteredWindows.Count == 0)
         {
             ShowStatus(
                 _allWindows.Count == 0 ? L.NoWindows : L.NoSearchResults,
@@ -904,7 +989,7 @@ internal sealed class MainForm : Form
             && !string.IsNullOrWhiteSpace(_newTitleBox.Text);
     }
 
-    private void ApplyRename()
+    private async Task ApplyRenameAsync()
     {
         if (_selectedWindow is null)
         {
@@ -926,7 +1011,11 @@ internal sealed class MainForm : Form
             if (result.WindowNoLongerExists)
             {
                 ShowStatus(L.WindowGoneError, StatusKind.Error);
-                RefreshWindowList(false);
+                await RefreshWindowListAsync(false);
+                if (IsDisposed || Disposing)
+                {
+                    return;
+                }
             }
             else
             {
@@ -971,7 +1060,12 @@ internal sealed class MainForm : Form
             status = $"{status} {L.KeepDisabled}";
         }
 
-        RefreshWindowList(false);
+        await RefreshWindowListAsync(false);
+        if (IsDisposed || Disposing)
+        {
+            return;
+        }
+
         ShowStatus(status, StatusKind.Success);
     }
 
@@ -989,12 +1083,12 @@ internal sealed class MainForm : Form
         ShowStatus(L.KeepDisabled, StatusKind.Success);
     }
 
-    private void NewTitleBox_KeyDown(object? sender, KeyEventArgs eventArgs)
+    private async void NewTitleBox_KeyDown(object? sender, KeyEventArgs eventArgs)
     {
         if (eventArgs.KeyCode == Keys.Enter && _applyButton.Enabled)
         {
             eventArgs.SuppressKeyPress = true;
-            ApplyRename();
+            await ApplyRenameAsync();
         }
     }
 
@@ -1054,13 +1148,16 @@ internal sealed class MainForm : Form
         }
     }
 
-    private void RestoreFromTray()
+    private async Task RestoreFromTrayAsync()
     {
         Show();
         Activate();
         BringToFront();
-        RefreshWindowList(false);
-        _refreshTimer.Start();
+        await RefreshWindowListAsync(false);
+        if (!IsDisposed && !Disposing && Visible)
+        {
+            _refreshTimer.Start();
+        }
     }
 
     protected override void WndProc(ref Message message)
