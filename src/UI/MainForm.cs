@@ -8,6 +8,10 @@ namespace WindowTitleRenamer.UI;
 
 internal sealed class MainForm : Form
 {
+    private const int WmSysCommand = 0x0112;
+    private const long ScMinimize = 0xF020;
+    private const long SystemCommandMask = 0xFFF0;
+
     private static readonly Color BackgroundColor = Color.FromArgb(18, 21, 28);
     private static readonly Color CardColor = Color.FromArgb(27, 31, 40);
     private static readonly Color InputColor = Color.FromArgb(34, 39, 50);
@@ -1031,8 +1035,14 @@ internal sealed class MainForm : Form
         }
 
         _refreshTimer.Stop();
-        ShowInTaskbar = false;
         Hide();
+
+        if (WindowState == FormWindowState.Minimized)
+        {
+            // Keep a programmatically minimized form in its normal state so
+            // restoring it does not render the minimized window first.
+            WindowState = FormWindowState.Normal;
+        }
 
         if (!_trayHintShown)
         {
@@ -1046,17 +1056,25 @@ internal sealed class MainForm : Form
 
     private void RestoreFromTray()
     {
-        ShowInTaskbar = true;
-        if (WindowState == FormWindowState.Minimized)
-        {
-            WindowState = FormWindowState.Normal;
-        }
-
         Show();
         Activate();
         BringToFront();
         RefreshWindowList(false);
         _refreshTimer.Start();
+    }
+
+    protected override void WndProc(ref Message message)
+    {
+        if (message.Msg == WmSysCommand &&
+            (message.WParam.ToInt64() & SystemCommandMask) == ScMinimize)
+        {
+            // Hide before Windows starts its minimize animation. Processing the
+            // default command first makes the form flash once before it vanishes.
+            HideToTray();
+            return;
+        }
+
+        base.WndProc(ref message);
     }
 
     private void ExitApplication()
