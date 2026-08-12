@@ -48,6 +48,13 @@ internal sealed class MainForm : Form
     private readonly ThemedButton _stopKeepingButton = new();
     private readonly Label _selectionHintLabel = new();
     private readonly Label _statusLabel = new();
+    private readonly ToolTip _toolTip = new()
+    {
+        AutoPopDelay = 15000,
+        InitialDelay = 500,
+        ReshowDelay = 100,
+        ShowAlways = true,
+    };
 
     private readonly ContextMenuStrip _trayMenu = new();
     private readonly ToolStripMenuItem _trayShowItem = new();
@@ -87,8 +94,8 @@ internal sealed class MainForm : Form
     private void ConfigureForm()
     {
         Text = "Window Title Renamer";
-        ClientSize = new Size(1180, 720);
-        MinimumSize = new Size(980, 640);
+        ClientSize = new Size(1180, 680);
+        MinimumSize = new Size(980, 620);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = BackgroundColor;
         ForeColor = PrimaryTextColor;
@@ -114,9 +121,9 @@ internal sealed class MainForm : Form
             Padding = new Padding(24, 18, 24, 14),
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 86F));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         root.Controls.Add(BuildHeader(), 0, 0);
         root.Controls.Add(BuildContent(), 0, 1);
@@ -128,6 +135,8 @@ internal sealed class MainForm : Form
     {
         TableLayoutPanel header = new()
         {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 1,
@@ -138,23 +147,25 @@ internal sealed class MainForm : Form
 
         TableLayoutPanel titleLayout = new()
         {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
             Margin = Padding.Empty,
         };
-        titleLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-        titleLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
+        titleLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        titleLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         _headerTitle.AutoSize = true;
         _headerTitle.Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold);
         _headerTitle.ForeColor = PrimaryTextColor;
-        _headerTitle.Margin = Padding.Empty;
+        _headerTitle.Margin = new Padding(0, 0, 0, 2);
 
         _headerSubtitle.AutoSize = true;
         _headerSubtitle.Font = new Font("Segoe UI", 10F);
         _headerSubtitle.ForeColor = SecondaryTextColor;
-        _headerSubtitle.Margin = new Padding(2, 2, 0, 0);
+        _headerSubtitle.Margin = new Padding(2, 0, 0, 10);
 
         titleLayout.Controls.Add(_headerTitle, 0, 0);
         titleLayout.Controls.Add(_headerSubtitle, 0, 1);
@@ -178,8 +189,7 @@ internal sealed class MainForm : Form
         _languageSelector.FlatStyle = FlatStyle.Flat;
         _languageSelector.BackColor = InputColor;
         _languageSelector.ForeColor = PrimaryTextColor;
-        _languageSelector.Width = 120;
-        _languageSelector.Height = 34;
+        _languageSelector.Width = 140;
         _languageSelector.Margin = new Padding(0, 2, 12, 0);
         _languageSelector.Items.AddRange(["简体中文", "English"]);
 
@@ -230,34 +240,36 @@ internal sealed class MainForm : Form
             Padding = new Padding(20, 17, 20, 14),
             Margin = Padding.Empty,
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         _windowListTitle.AutoSize = true;
         _windowListTitle.Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold);
         _windowListTitle.ForeColor = PrimaryTextColor;
-        _windowListTitle.Margin = Padding.Empty;
+        _windowListTitle.Margin = new Padding(0, 0, 0, 8);
 
         TableLayoutPanel searchLayout = new()
         {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 1,
             Margin = Padding.Empty,
         };
         searchLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        searchLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108F));
+        searchLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
         ConfigureInput(_searchBox);
         _searchBox.Name = "SearchBox";
-        _searchBox.Margin = new Padding(0, 0, 10, 8);
+        _searchBox.Margin = new Padding(0, 0, 10, 10);
 
         ConfigureSecondaryButton(_refreshButton, 98);
         _refreshButton.Name = "RefreshButton";
         _refreshButton.Dock = DockStyle.Fill;
-        _refreshButton.Margin = new Padding(0, 0, 0, 8);
+        _refreshButton.Margin = new Padding(0, 0, 0, 10);
 
         searchLayout.Controls.Add(_searchBox, 0, 0);
         searchLayout.Controls.Add(_refreshButton, 1, 0);
@@ -266,7 +278,7 @@ internal sealed class MainForm : Form
 
         _windowCountLabel.AutoSize = true;
         _windowCountLabel.ForeColor = SecondaryTextColor;
-        _windowCountLabel.Margin = new Padding(2, 8, 0, 0);
+        _windowCountLabel.Margin = new Padding(2, 10, 0, 0);
 
         layout.Controls.Add(_windowListTitle, 0, 0);
         layout.Controls.Add(searchLayout, 0, 1);
@@ -295,9 +307,7 @@ internal sealed class MainForm : Form
         _windowGrid.AutoGenerateColumns = false;
         _windowGrid.EnableHeadersVisualStyles = false;
         _windowGrid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        _windowGrid.ColumnHeadersHeight = 38;
         _windowGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        _windowGrid.RowTemplate.Height = 42;
         _windowGrid.DefaultCellStyle = new DataGridViewCellStyle
         {
             BackColor = CardColor,
@@ -316,18 +326,21 @@ internal sealed class MainForm : Form
             Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold),
             Padding = new Padding(6, 0, 6, 0),
         };
+        _windowGrid.ColumnHeadersHeight = _windowGrid.ColumnHeadersDefaultCellStyle.Font.Height + 18;
+        _windowGrid.RowTemplate.Height = _windowGrid.DefaultCellStyle.Font.Height + 18;
 
         _windowGrid.Columns.Add(new DataGridViewTextBoxColumn
         {
             Name = "TitleColumn",
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
-            MinimumWidth = 220,
+            MinimumWidth = 160,
             SortMode = DataGridViewColumnSortMode.NotSortable,
         });
         _windowGrid.Columns.Add(new DataGridViewTextBoxColumn
         {
             Name = "StatusColumn",
-            Width = 104,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            MinimumWidth = 96,
             SortMode = DataGridViewColumnSortMode.NotSortable,
             DefaultCellStyle = new DataGridViewCellStyle
             {
@@ -337,7 +350,8 @@ internal sealed class MainForm : Form
         _windowGrid.Columns.Add(new DataGridViewTextBoxColumn
         {
             Name = "HandleColumn",
-            Width = 184,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            MinimumWidth = 170,
             SortMode = DataGridViewColumnSortMode.NotSortable,
             DefaultCellStyle = new DataGridViewCellStyle
             {
@@ -353,50 +367,53 @@ internal sealed class MainForm : Form
         TableLayoutPanel layout = new()
         {
             Dock = DockStyle.Fill,
+            AutoScroll = true,
             ColumnCount = 1,
-            RowCount = 10,
+            RowCount = 9,
             Padding = new Padding(24, 17, 24, 18),
             Margin = Padding.Empty,
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 46F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 25F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 61F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 51F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 78F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54F));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 1F));
 
         _renamePanelTitle.AutoSize = true;
         _renamePanelTitle.Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold);
         _renamePanelTitle.ForeColor = PrimaryTextColor;
-        _renamePanelTitle.Margin = Padding.Empty;
+        _renamePanelTitle.Margin = new Padding(0, 0, 0, 8);
 
-        _selectedWindowLabel.Dock = DockStyle.Fill;
+        _selectedWindowLabel.Dock = DockStyle.Top;
+        _selectedWindowLabel.AutoSize = false;
         _selectedWindowLabel.Font = new Font("Segoe UI Semibold", 11F, FontStyle.Bold);
+        _selectedWindowLabel.Height = _selectedWindowLabel.Font.Height + 8;
         _selectedWindowLabel.ForeColor = SecondaryTextColor;
         _selectedWindowLabel.AutoEllipsis = true;
-        _selectedWindowLabel.TextAlign = ContentAlignment.MiddleLeft;
-        _selectedWindowLabel.Margin = Padding.Empty;
+        _selectedWindowLabel.TextAlign = ContentAlignment.TopLeft;
+        _selectedWindowLabel.Margin = new Padding(0, 0, 0, 8);
 
         ConfigureFieldLabel(_currentTitleLabel);
         ConfigureReadOnlyInput(_currentTitleBox);
         _currentTitleBox.Name = "CurrentTitleBox";
-        _currentTitleBox.Margin = new Padding(0, 0, 0, 10);
+        _currentTitleBox.Margin = new Padding(0, 0, 0, 12);
 
         ConfigureFieldLabel(_newTitleLabel);
         ConfigureInput(_newTitleBox);
         _newTitleBox.Name = "NewTitleBox";
-        _newTitleBox.Margin = new Padding(0, 0, 0, 10);
+        _newTitleBox.Margin = new Padding(0, 0, 0, 12);
 
         Control keepPanel = BuildKeepTitlePanel();
         Control buttonPanel = BuildEditorButtons();
 
         _selectionHintLabel.Dock = DockStyle.Top;
         _selectionHintLabel.AutoSize = false;
-        _selectionHintLabel.Height = 42;
+        _selectionHintLabel.Font = new Font("Segoe UI", 9.5F);
+        _selectionHintLabel.Height = _selectionHintLabel.Font.Height * 2 + 8;
         _selectionHintLabel.ForeColor = SecondaryTextColor;
         _selectionHintLabel.TextAlign = ContentAlignment.MiddleLeft;
         _selectionHintLabel.Margin = new Padding(0, 12, 0, 0);
@@ -418,24 +435,30 @@ internal sealed class MainForm : Form
     {
         TableLayoutPanel panel = new()
         {
-            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
             ColumnCount = 1,
             RowCount = 2,
             Margin = Padding.Empty,
         };
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 31F));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         _keepTitleCheckBox.AutoSize = true;
         _keepTitleCheckBox.Name = "KeepTitleCheckBox";
         _keepTitleCheckBox.ForeColor = PrimaryTextColor;
         _keepTitleCheckBox.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-        _keepTitleCheckBox.Margin = new Padding(0, 5, 0, 0);
+        _keepTitleCheckBox.Margin = new Padding(0, 3, 0, 3);
         _keepTitleCheckBox.FlatStyle = FlatStyle.Flat;
 
-        _keepDescriptionLabel.AutoSize = true;
+        _keepDescriptionLabel.AutoSize = false;
+        _keepDescriptionLabel.Dock = DockStyle.Top;
+        _keepDescriptionLabel.Font = new Font("Segoe UI", 9.5F);
+        _keepDescriptionLabel.Height = _keepDescriptionLabel.Font.Height * 2 + 6;
         _keepDescriptionLabel.ForeColor = SecondaryTextColor;
-        _keepDescriptionLabel.Margin = new Padding(22, 0, 0, 0);
+        _keepDescriptionLabel.TextAlign = ContentAlignment.TopLeft;
+        _keepDescriptionLabel.Margin = new Padding(22, 0, 0, 8);
 
         panel.Controls.Add(_keepTitleCheckBox, 0, 0);
         panel.Controls.Add(_keepDescriptionLabel, 0, 1);
@@ -446,7 +469,9 @@ internal sealed class MainForm : Form
     {
         TableLayoutPanel buttons = new()
         {
-            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
             ColumnCount = 2,
             RowCount = 1,
             Margin = Padding.Empty,
@@ -457,12 +482,12 @@ internal sealed class MainForm : Form
         ConfigurePrimaryButton(_applyButton);
         _applyButton.Name = "ApplyButton";
         _applyButton.Dock = DockStyle.Fill;
-        _applyButton.Margin = new Padding(0, 0, 6, 7);
+        _applyButton.Margin = new Padding(0, 0, 6, 8);
 
         ConfigureSecondaryButton(_stopKeepingButton, 130);
         _stopKeepingButton.Name = "StopKeepingButton";
         _stopKeepingButton.Dock = DockStyle.Fill;
-        _stopKeepingButton.Margin = new Padding(6, 0, 0, 7);
+        _stopKeepingButton.Margin = new Padding(6, 0, 0, 8);
 
         buttons.Controls.Add(_applyButton, 0, 0);
         buttons.Controls.Add(_stopKeepingButton, 1, 0);
@@ -471,19 +496,15 @@ internal sealed class MainForm : Form
 
     private Control BuildStatusBar()
     {
-        Panel panel = new()
-        {
-            Dock = DockStyle.Fill,
-            Margin = Padding.Empty,
-            BackColor = BackgroundColor,
-        };
-
+        _statusLabel.AutoSize = true;
         _statusLabel.Dock = DockStyle.Fill;
+        _statusLabel.BackColor = BackgroundColor;
         _statusLabel.ForeColor = SecondaryTextColor;
         _statusLabel.TextAlign = ContentAlignment.MiddleLeft;
         _statusLabel.AutoEllipsis = true;
-        panel.Controls.Add(_statusLabel);
-        return panel;
+        _statusLabel.Padding = new Padding(0, 8, 0, 2);
+        _statusLabel.Margin = Padding.Empty;
+        return _statusLabel;
     }
 
     private static Panel CreateCard()
@@ -506,7 +527,7 @@ internal sealed class MainForm : Form
 
     private static void ConfigureInput(TextBox textBox)
     {
-        textBox.Dock = DockStyle.Fill;
+        textBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
         textBox.BackColor = InputColor;
         textBox.ForeColor = PrimaryTextColor;
         textBox.BorderStyle = BorderStyle.FixedSingle;
@@ -517,17 +538,20 @@ internal sealed class MainForm : Form
     {
         ConfigureInput(textBox);
         textBox.ReadOnly = true;
-        textBox.Multiline = true;
         textBox.TabStop = false;
     }
 
     private static void ConfigurePrimaryButton(Button button)
     {
+        button.AutoSize = true;
+        button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 0;
         button.BackColor = AccentColor;
         button.ForeColor = Color.FromArgb(30, 25, 15);
         button.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
+        button.MinimumSize = new Size(0, button.Font.Height + 18);
+        button.Padding = new Padding(14, 5, 14, 5);
         button.Cursor = Cursors.Hand;
         button.UseVisualStyleBackColor = false;
         if (button is ThemedButton themedButton)
@@ -548,14 +572,16 @@ internal sealed class MainForm : Form
 
     private static void ConfigureSecondaryButton(Button button, int width)
     {
-        button.Width = width;
-        button.Height = 36;
+        button.AutoSize = true;
+        button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 1;
         button.FlatAppearance.BorderColor = BorderColor;
         button.BackColor = InputColor;
         button.ForeColor = PrimaryTextColor;
         button.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+        button.MinimumSize = new Size(width, button.Font.Height + 16);
+        button.Padding = new Padding(12, 4, 12, 4);
         button.Cursor = Cursors.Hand;
         button.UseVisualStyleBackColor = false;
         if (button is ThemedButton themedButton)
@@ -590,6 +616,7 @@ internal sealed class MainForm : Form
 
     private void WireEvents()
     {
+        Load += (_, _) => FitToWorkingArea();
         Shown += (_, _) =>
         {
             RefreshWindowList(true);
@@ -620,6 +647,24 @@ internal sealed class MainForm : Form
         _trayShowItem.Click += (_, _) => RestoreFromTray();
         _trayExitItem.Click += (_, _) => ExitApplication();
         _notifyIcon.DoubleClick += (_, _) => RestoreFromTray();
+    }
+
+    private void FitToWorkingArea()
+    {
+        Rectangle workingArea = Screen.FromHandle(Handle).WorkingArea;
+        const int screenMargin = 16;
+        int availableWidth = Math.Max(720, workingArea.Width - screenMargin * 2);
+        int availableHeight = Math.Max(540, workingArea.Height - screenMargin * 2);
+
+        MinimumSize = new Size(
+            Math.Min(MinimumSize.Width, availableWidth),
+            Math.Min(MinimumSize.Height, availableHeight));
+        Size = new Size(
+            Math.Min(Width, availableWidth),
+            Math.Min(Height, availableHeight));
+        Location = new Point(
+            workingArea.Left + (workingArea.Width - Width) / 2,
+            workingArea.Top + (workingArea.Height - Height) / 2);
     }
 
     private void SelectConfiguredLanguage()
@@ -742,6 +787,7 @@ internal sealed class MainForm : Form
                     window.HandleText);
                 DataGridViewRow row = _windowGrid.Rows[rowIndex];
                 row.Tag = window;
+                row.Cells[0].ToolTipText = window.Title;
 
                 if (isKeeping)
                 {
@@ -812,6 +858,8 @@ internal sealed class MainForm : Form
         {
             _selectedWindowLabel.Text = L.NoSelection;
             _selectedWindowLabel.ForeColor = SecondaryTextColor;
+            _toolTip.SetToolTip(_selectedWindowLabel, string.Empty);
+            _toolTip.SetToolTip(_currentTitleBox, string.Empty);
             _currentTitleBox.Clear();
             _newTitleBox.Clear();
             _newTitleBox.Enabled = false;
@@ -829,6 +877,8 @@ internal sealed class MainForm : Form
         _selectedWindowLabel.Text = window.Title;
         _selectedWindowLabel.ForeColor = PrimaryTextColor;
         _currentTitleBox.Text = window.Title;
+        _toolTip.SetToolTip(_selectedWindowLabel, window.Title);
+        _toolTip.SetToolTip(_currentTitleBox, window.Title);
         _newTitleBox.Enabled = true;
         _keepTitleCheckBox.Enabled = true;
 
@@ -1022,6 +1072,7 @@ internal sealed class MainForm : Form
         if (disposing)
         {
             _refreshTimer.Dispose();
+            _toolTip.Dispose();
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             _trayMenu.Dispose();
