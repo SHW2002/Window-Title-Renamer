@@ -112,7 +112,7 @@ internal sealed class MainForm : Form
     private void ConfigureForm()
     {
         Text = "Window Title Renamer";
-        ClientSize = new Size(1180, 1020);
+        ClientSize = new Size(1357, 1020);
         MinimumSize = new Size(980, 620);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = BackgroundColor;

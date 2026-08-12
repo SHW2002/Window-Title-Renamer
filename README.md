@@ -11,6 +11,7 @@ Rename the title of any visible Windows desktop window, including its taskbar la
 ## Features
 
 - Search and refresh open windows from a modern single-page interface
+- Load and refresh the window list in the background without blocking the interface
 - Rename a selected window immediately
 - Keep a title in place by re-applying it every second
 - Run in the system tray while keeping rules active
@@ -22,7 +23,7 @@ Persistent rules last for the current app session only and are cleared when Wind
 ## Usage
 
 1. Download the executable from the **Releases** page and run it.
-2. Search for a window title or select a window from the automatically refreshed list.
+2. Search for a window title or select a window from the automatically refreshed list. The list refreshes every two seconds while the main window is visible.
 3. Enter the new title, optionally enable **Keep this title**, and choose **Apply title**. Pressing <kbd>Enter</kbd> also applies the change.
 4. Use **Stop keeping** to remove an active rule.
 5. Minimize or close the main window to send the app to the system tray. Double-click the tray icon to restore it, or use the tray menu to exit completely.
@@ -33,10 +34,10 @@ Some elevated applications or windows that reject `SetWindowText` may require ru
 
 ```powershell
 dotnet build
-dotnet publish -c Release
+dotnet publish -c Release -r win-x64
 ```
 
-Each publish is archived under `bin/Release-Archives/` as a timestamped ZIP package.
+Each publish is archived under `bin/Release-Archives/` as a timestamped self-contained ZIP package.
 
 <br>
 
@@ -49,6 +50,7 @@ Each publish is archived under `bin/Release-Archives/` as a timestamped ZIP pack
 ## 功能
 
 - 在现代化单页界面中搜索和刷新已打开的窗口
+- 在后台加载和刷新窗口列表，避免阻塞界面操作
 - 立即修改所选窗口的标题
 - 每秒重新应用一次标题，防止标题被其他程序还原
 - 隐藏到系统托盘后继续维持规则
@@ -60,7 +62,7 @@ Each publish is archived under `bin/Release-Archives/` as a timestamped ZIP pack
 ## 用法
 
 1. 从**发布页面**下载可执行文件并运行。
-2. 搜索窗口标题，或从自动刷新的窗口列表中选择目标窗口。
+2. 搜索窗口标题，或从自动刷新的窗口列表中选择目标窗口；主窗口可见时，列表每两秒刷新一次。
 3. 输入新标题，按需启用**持续保持此标题**，然后点击**应用标题**；也可以按 <kbd>Enter</kbd> 应用。
 4. 点击**停止保持**可移除活动规则。
 5. 最小化或关闭主窗口会将程序隐藏到系统托盘；双击托盘图标可恢复窗口，也可通过托盘菜单彻底退出。
@@ -71,10 +73,10 @@ Each publish is archived under `bin/Release-Archives/` as a timestamped ZIP pack
 
 ```powershell
 dotnet build
-dotnet publish -c Release
+dotnet publish -c Release -r win-x64
 ```
 
-每次发布都会在 `bin/Release-Archives/` 下生成带时间戳的 ZIP 归档包。
+每次发布都会在 `bin/Release-Archives/` 下生成带时间戳的自包含 ZIP 归档包。
 
 <p align="center">
   <img src="https://img.shields.io/github/downloads/SHthemW/Window-Title-Renamer/total" alt="downloads" />
