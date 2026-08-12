@@ -1,13 +1,6 @@
 namespace WindowTitleRenamer;
 
-internal readonly struct WindowInfo
+internal sealed record WindowInfo(IntPtr Hwnd, string Title)
 {
-    public IntPtr Hwnd { get; }
-    public string Title { get; }
-
-    public WindowInfo(IntPtr hwnd, string title)
-    {
-        Hwnd = hwnd;
-        Title = title;
-    }
+    public string HandleText => $"0x{Hwnd.ToInt64():X16}";
 }

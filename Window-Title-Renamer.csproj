@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -13,21 +13,26 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="res\icon.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 
   <Target Name="ArchiveAfterPublish" AfterTargets="Publish">
     <PropertyGroup>
-      <_Timestamp>$([System.DateTime]::Now.ToString("yyyyMMdd_HHmmss"))</_Timestamp>
-      <_ZipName>$(AssemblyName)_$(RuntimeIdentifier)_$(_Timestamp).zip</_ZipName>
-      <_ArchiveDir>$(MSBuildProjectDirectory)\bin\Release-Archive</_ArchiveDir>
+      <_Timestamp>$([System.DateTime]::Now.ToString("yyMMdd-HHmmss"))</_Timestamp>
+      <_PackageType Condition="'$(SelfContained)' == 'true'">self-contained</_PackageType>
+      <_PackageType Condition="'$(_PackageType)' == ''">portable</_PackageType>
+      <_ZipName>$(AssemblyName)-$(RuntimeIdentifier)-$(_PackageType)-$(_Timestamp).zip</_ZipName>
+      <_ArchiveDir>$(MSBuildProjectDirectory)\bin\Release-Archives</_ArchiveDir>
     </PropertyGroup>
 
+    <ItemGroup>
+      <_PublishedResourceFiles Include="$(PublishDir)res\**\*" />
+    </ItemGroup>
+
+    <RemoveDir Directories="$(PublishDir)res" Condition="Exists('$(PublishDir)res') and '@(_PublishedResourceFiles)' == ''" />
     <MakeDir Directories="$(_ArchiveDir)" />
     <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(_ArchiveDir)\$(_ZipName)" Overwrite="true" />
     <Message Importance="high" Text="Archived: $(_ArchiveDir)\$(_ZipName)" />
