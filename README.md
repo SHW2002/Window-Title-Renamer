@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="res/gui.png" width="85%" alt="Window Title Renamer GUI" />
+  <img src="res/gui.png" width="66%" alt="Window Title Renamer GUI" />
   <br />
   <strong>English</strong> | <a href="README.zh-CN.md">简体中文</a>
 </p>

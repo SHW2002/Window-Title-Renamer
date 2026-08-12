@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="res/gui.png" width="85%" alt="窗口标题重命名工具界面" />
+  <img src="res/gui.png" width="66%" alt="窗口标题重命名工具界面" />
   <br />
   <a href="README.md">English</a> | <strong>简体中文</strong>
 </p>
