@@ -2,35 +2,29 @@ namespace WindowTitleRenamer;
 
 internal sealed class PersistentRenamer : IDisposable
 {
-    private readonly object _lock = new object();
-    private readonly Dictionary<IntPtr, string> _rules = new Dictionary<IntPtr, string>();
-    private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-    private Thread? _thread;
+    private readonly object _syncRoot = new();
+    private readonly Dictionary<IntPtr, string> _rules = [];
+    private readonly CancellationTokenSource _cancellation = new();
+    private Thread? _workerThread;
 
     public void Start()
     {
-        if (_thread != null) return;
+        if (_workerThread is not null)
+        {
+            return;
+        }
 
-        _thread = new Thread(Worker)
+        _workerThread = new Thread(WorkerLoop)
         {
             IsBackground = true,
-            Name = "PersistentRenamerWorker"
+            Name = "PersistentRenamerWorker",
         };
-        _thread.Start();
-    }
-
-    public void Stop()
-    {
-        _cts.Cancel();
-        if (_thread != null && _thread.IsAlive)
-        {
-            _thread.Join(2000);
-        }
+        _workerThread.Start();
     }
 
     public void AddOrUpdate(IntPtr hwnd, string title)
     {
-        lock (_lock)
+        lock (_syncRoot)
         {
             _rules[hwnd] = title;
         }
@@ -38,58 +32,60 @@ internal sealed class PersistentRenamer : IDisposable
 
     public void Remove(IntPtr hwnd)
     {
-        lock (_lock)
+        lock (_syncRoot)
         {
             _rules.Remove(hwnd);
         }
     }
 
-    public Dictionary<IntPtr, string> ListRules()
+    public IReadOnlyDictionary<IntPtr, string> ListRules()
     {
-        lock (_lock)
+        lock (_syncRoot)
         {
             return new Dictionary<IntPtr, string>(_rules);
         }
     }
 
-    private void Worker()
+    public void Stop()
     {
-        while (!_cts.IsCancellationRequested)
-        {
-            Thread.Sleep(1000);
+        _cancellation.Cancel();
+        _workerThread?.Join(TimeSpan.FromSeconds(2));
+    }
 
-            List<KeyValuePair<IntPtr, string>> items;
-            lock (_lock)
+    private void WorkerLoop()
+    {
+        WaitHandle cancellationHandle = _cancellation.Token.WaitHandle;
+
+        while (!cancellationHandle.WaitOne(TimeSpan.FromSeconds(1)))
+        {
+            List<KeyValuePair<IntPtr, string>> rules;
+            lock (_syncRoot)
             {
-                items = new List<KeyValuePair<IntPtr, string>>(_rules);
+                rules = [.. _rules];
             }
 
-            if (items.Count == 0) continue;
-
-            List<IntPtr> dead = new List<IntPtr>();
-
-            foreach (var kv in items)
+            List<IntPtr> closedWindows = [];
+            foreach ((IntPtr hwnd, string title) in rules)
             {
-                var hwnd = kv.Key;
-                var title = kv.Value;
-
                 if (!NativeMethods.IsWindow(hwnd))
                 {
-                    dead.Add(hwnd);
+                    closedWindows.Add(hwnd);
                     continue;
                 }
 
                 NativeMethods.SetWindowTextW(hwnd, title);
             }
 
-            if (dead.Count > 0)
+            if (closedWindows.Count == 0)
             {
-                lock (_lock)
+                continue;
+            }
+
+            lock (_syncRoot)
+            {
+                foreach (IntPtr hwnd in closedWindows)
                 {
-                    foreach (var hwnd in dead)
-                    {
-                        _rules.Remove(hwnd);
-                    }
+                    _rules.Remove(hwnd);
                 }
             }
         }
@@ -98,6 +94,6 @@ internal sealed class PersistentRenamer : IDisposable
     public void Dispose()
     {
         Stop();
-        _cts.Dispose();
+        _cancellation.Dispose();
     }
 }
