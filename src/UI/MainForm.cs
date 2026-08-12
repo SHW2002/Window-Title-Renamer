@@ -9,7 +9,8 @@ namespace WindowTitleRenamer.UI;
 internal sealed class MainForm : Form
 {
     private const int WmSysCommand = 0x0112;
-    private const int WsExComposited = 0x02000000;
+    private const int WmEnterSizeMove = 0x0231;
+    private const int WmExitSizeMove = 0x0232;
     private const long ScMinimize = 0xF020;
     private const long SystemCommandMask = 0xFFF0;
 
@@ -72,21 +73,13 @@ internal sealed class MainForm : Form
     private bool _updatingGrid;
     private bool _applyingLanguage;
     private bool _refreshInProgress;
+    private bool _isMovingOrResizing;
+    private bool _refreshAfterSizeMove;
     private bool _hasLoadedWindowList;
     private bool _exitRequested;
     private bool _trayHintShown;
 
     private Strings L => Strings.Current;
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            CreateParams parameters = base.CreateParams;
-            parameters.ExStyle |= WsExComposited;
-            return parameters;
-        }
-    }
 
     public MainForm(
         WindowService windowService,
@@ -119,7 +112,7 @@ internal sealed class MainForm : Form
     private void ConfigureForm()
     {
         Text = "Window Title Renamer";
-        ClientSize = new Size(1180, 680);
+        ClientSize = new Size(1180, 1020);
         MinimumSize = new Size(980, 620);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = BackgroundColor;
@@ -784,6 +777,11 @@ internal sealed class MainForm : Form
         {
             return;
         }
+        if (_isMovingOrResizing)
+        {
+            _refreshAfterSizeMove = true;
+            return;
+        }
 
         _refreshInProgress = true;
         _refreshButton.Enabled = false;
@@ -802,6 +800,12 @@ internal sealed class MainForm : Form
 
             if (IsDisposed || Disposing)
             {
+                return;
+            }
+
+            if (_isMovingOrResizing)
+            {
+                _refreshAfterSizeMove = true;
                 return;
             }
 
@@ -1162,6 +1166,12 @@ internal sealed class MainForm : Form
 
     protected override void WndProc(ref Message message)
     {
+        if (message.Msg == WmEnterSizeMove)
+        {
+            _isMovingOrResizing = true;
+            _refreshTimer.Stop();
+        }
+
         if (message.Msg == WmSysCommand &&
             (message.WParam.ToInt64() & SystemCommandMask) == ScMinimize)
         {
@@ -1172,6 +1182,22 @@ internal sealed class MainForm : Form
         }
 
         base.WndProc(ref message);
+
+        if (message.Msg == WmExitSizeMove)
+        {
+            _isMovingOrResizing = false;
+
+            if (_refreshAfterSizeMove)
+            {
+                _refreshAfterSizeMove = false;
+                _ = RefreshWindowListAsync(false);
+            }
+
+            if (Visible && !IsDisposed && !Disposing)
+            {
+                _refreshTimer.Start();
+            }
+        }
     }
 
     private void ExitApplication()
