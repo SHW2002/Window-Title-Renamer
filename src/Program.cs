@@ -26,7 +26,9 @@ internal static class Program
 
         WindowService windowService = new();
         using PersistentRenamer persistentRenamer = new();
+        using RenamerPipeServer pipeServer = new(persistentRenamer);
         persistentRenamer.Start();
+        pipeServer.Start();
 
         Application.Run(new MainForm(windowService, persistentRenamer, settings));
     }

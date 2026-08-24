@@ -23,6 +23,10 @@
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
+  </ItemGroup>
+
   <Target Name="ArchiveAfterPublish" AfterTargets="Publish">
     <PropertyGroup>
       <_Timestamp>$([System.DateTime]::Now.ToString("yyMMdd-HHmmss"))</_Timestamp>
