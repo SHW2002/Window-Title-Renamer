@@ -97,7 +97,7 @@ internal sealed class RenamerPipeServer : IDisposable
                 "query_persistent_rule",
                 StringComparison.Ordinal))
         {
-            bool found = _persistentRenamer.ListRules().TryGetValue(windowHandle, out string? title);
+            bool found = _persistentRenamer.TryGetRule(windowHandle, out string? title);
             return new PipeResponse(true, found, title, null);
         }
 
